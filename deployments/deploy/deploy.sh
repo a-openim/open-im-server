@@ -20,10 +20,6 @@ kubectl apply -f redis-secret.yml -n $NAMESPACE
 echo "Applying ConfigMap..."
 kubectl apply -f openim-config.yml -n $NAMESPACE
 
-# Apply ClusterRole and ClusterRoleBinding
-echo "Applying RBAC..."
-kubectl apply -f clusterRole.yml -n $NAMESPACE
-
 # Apply services
 echo "Applying services..."
 kubectl apply -f kafka-service.yml -n $NAMESPACE

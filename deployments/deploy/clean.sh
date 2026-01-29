@@ -53,10 +53,6 @@ kubectl delete -f openim-rpc-msg-service.yml -n $NAMESPACE --ignore-not-found=tr
 kubectl delete -f openim-rpc-third-service.yml -n $NAMESPACE --ignore-not-found=true
 kubectl delete -f openim-rpc-user-service.yml -n $NAMESPACE --ignore-not-found=true
 
-# Delete ClusterRole and ClusterRoleBinding
-echo "Deleting RBAC..."
-kubectl delete -f clusterRole.yml -n $NAMESPACE --ignore-not-found=true
-
 # Delete ConfigMap
 echo "Deleting ConfigMap..."
 kubectl delete -f openim-config.yml -n $NAMESPACE --ignore-not-found=true
