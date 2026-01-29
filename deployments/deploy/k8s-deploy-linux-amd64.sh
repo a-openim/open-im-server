@@ -5,6 +5,16 @@
 
 set -e
 
+# Check if running as root
+if [ "$EUID" -eq 0 ]; then
+  echo "This script should not be run as root due to Docker credential storage issues on macOS."
+  echo "Please run this script as your regular user."
+  exit 1
+fi
+
+ROOT_DIR=$(pwd)
+echo $ROOT_DIR
+
 # Source the deployment config
 source deploy.confg
 
@@ -21,18 +31,23 @@ mage build
 
 # Login to private Harbor
 echo "Logging in to Harbor..."
+# Set DOCKER_CONFIG to a temporary directory to avoid macOS Keychain issues
+export DOCKER_CONFIG=$(mktemp -d)
+export DOCKER_CREDS_STORE=""
+# Create a config.json with credsStore set to empty string to prevent Keychain usage
+echo '{"auths":{},"credsStore":""}' > $DOCKER_CONFIG/config.json
 echo "$HARBOR_PASS" | docker login $HARBOR_URL -u $HARBOR_USER --password-stdin
 
 # Build Docker images for linux/amd64 and push to Harbor
 echo "Building and pushing Docker images for linux/amd64..."
 
-docker buildx create --use --name openim-builder || true
+docker buildx create --name openim-builder || true
 
 services=("openim-api" "openim-crontask" "openim-msggateway" "openim-msgtransfer" "openim-push" "openim-rpc-auth" "openim-rpc-conversation" "openim-rpc-friend" "openim-rpc-group" "openim-rpc-msg" "openim-rpc-third" "openim-rpc-user")
 
 for service in "${services[@]}"; do
   IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${VERSION}"
-  docker buildx build --platform linux/amd64 -t $IMAGE_TAG build/images/$service/ --push
+  docker buildx build -t $IMAGE_TAG build/images/$service/ --push
 done
 
 # Update deployment YAMLs to use Harbor images
