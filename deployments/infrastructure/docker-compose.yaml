@@ -1,0 +1,145 @@
+networks:
+  openim:
+    driver: bridge
+
+services:
+  # --- 新增 Zookeeper 组件 ---
+  zookeeper:
+    image: bitnamilegacy/zookeeper:3.9.3
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOO_TICK_TIME=2000
+    volumes:
+      - "./components/zookeeper/data:/bitnami/zookeeper/data"
+      - "./components/zookeeper/logs:/bitnami/zookeeper/logs"
+    deploy:
+      resources:
+        limits:
+          memory: 256M # 限制内存以省钱
+    restart: always
+    networks:
+      - openim
+
+  mongo:
+    image: mongo:7.0
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    command: >
+      bash -c '
+       docker-entrypoint.sh mongod --wiredTigerCacheSizeGB 0.25 &
+      until mongosh -u root -p root123456 --authenticationDatabase admin --eval "db.runCommand({ ping: 1 })" &>/dev/null; do
+        sleep 1
+      done &&
+      mongosh -u root -p root123456 --authenticationDatabase admin --eval "
+      db = db.getSiblingDB(\"openim_v3\");
+      if (!db.getUser(\"openIM\")) {
+        db.createUser({
+          user: \"openIM\",
+          pwd: \"root123456\",
+          roles: [{role: \"readWrite\", db: \"openim_v3\"}]
+        });
+      }
+      " &&
+      tail -f /dev/null
+      '
+    volumes:
+      - "./components/mongodb/data/db:/data/db"
+    environment:
+      - TZ=Asia/Shanghai
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=root123456
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    restart: always
+    networks:
+      - openim
+
+  redis:
+    image: redis:7.0.0
+    container_name: openim-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - "./components/redis/data:/data"
+    command: [
+        "redis-server",
+        "--requirepass", "root123456",
+        "--maxmemory", "256mb",
+        "--maxmemory-policy", "allkeys-lru",
+        "--appendonly", "yes"
+      ]
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    restart: always
+    networks:
+      - openim
+
+  etcd:
+    image: bitnamilegacy/etcd:3.5.13
+    container_name: etcd
+    ports:
+      - "12379:2379"
+    environment:
+      - ETCD_NAME=s1
+      - ETCD_ADVERTISE_CLIENT_URLS=http://10.88.88.13:12379
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ALLOW_NONE_AUTHENTICATION=no
+      - ETCD_ROOT_USER=root
+      - ETCD_ROOT_PASSWORD=root123456
+    volumes:
+      - "./components/etcd:/etcd-data"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    restart: always
+    networks:
+      - openim
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    container_name: redpanda
+    command:
+      - redpanda start
+      - --overprovisioned
+      - --smp 1
+      - --memory 512M
+      - --reserve-memory 0M
+      - --kafka-addr internal://0.0.0.0:29092,external://0.0.0.0:9092
+      - --advertise-kafka-addr internal://redpanda:29092,external://10.88.88.13:9092
+    ports:
+      - "9092:9092"
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+    networks:
+      - openim
+
+  minio:
+    image: minio/minio:RELEASE.2024-01-11T07-46-16Z
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9090:9090"
+    volumes:
+      - "./components/mnt/data:/data"
+    environment:
+      MINIO_ROOT_USER: root
+      MINIO_ROOT_PASSWORD: root123456
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    restart: always
+    command: minio server /data --console-address ':9090'
+    networks:
+      - openim
