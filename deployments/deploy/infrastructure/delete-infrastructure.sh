@@ -8,9 +8,6 @@ set -e  # Exit on any error
 echo "Starting OpenIM infrastructure deletion..."
 
 # Delete Infrastructure components
-echo "Deleting ingress..."
-kubectl delete -f ingress.yml
-
 echo "Deleting configmap..."
 kubectl delete -f openim-config.yml
 

@@ -36,4 +36,8 @@ kubectl delete -f openim-rpc-msg-service.yml
 kubectl delete -f openim-rpc-third-service.yml
 kubectl delete -f openim-rpc-user-service.yml
 
+# Delete Ingress
+echo "Deleting ingress..."
+kubectl delete -f ingress.yml
+
 echo "OpenIM application deletion completed successfully!"

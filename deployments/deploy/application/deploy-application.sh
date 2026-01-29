@@ -36,4 +36,8 @@ kubectl apply -f openim-rpc-msg-deployment.yml
 kubectl apply -f openim-rpc-third-deployment.yml
 kubectl apply -f openim-rpc-user-deployment.yml
 
+# Apply Ingress
+echo "Applying ingress..."
+kubectl apply -f ingress.yml
+
 echo "OpenIM application deployment completed successfully!"

@@ -32,8 +32,4 @@ kubectl apply -f redis-statefulset.yml
 echo "Applying configmap..."
 kubectl apply -f openim-config.yml
 
-# Apply Ingress
-echo "Applying ingress..."
-kubectl apply -f ingress.yml
-
 echo "OpenIM infrastructure deployment completed successfully!"
