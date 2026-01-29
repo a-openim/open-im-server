@@ -4,8 +4,8 @@ etcd:
   address: [10.88.88.13:12379]
   ## Attention: If you set auth in etcd
   ## you must also update the username and password in Chat project.
-  username:
-  password:
+  username: "root"
+  password: "root123456"
 
 kubernetes:
   namespace: default
