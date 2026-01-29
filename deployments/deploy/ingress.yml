@@ -5,9 +5,10 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
-  ingressClassName: openim-nginx
+  ingressClassName: nginx
   rules:
-    - http:
+    - host: backend-openim.36x9.com
+      http:
         paths:
           - path: /openim-api
             pathType: Prefix
