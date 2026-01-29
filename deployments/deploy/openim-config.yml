@@ -6,7 +6,7 @@ data:
   discovery.yml: |
     enable: "kubernetes" # "kubernetes" or "etcd"
     kubernetes:
-      namespace: default
+      namespace: openim
     etcd:
       rootDirectory: openim
       address: [ localhost:12379 ]
@@ -382,7 +382,7 @@ data:
       policy: 1
       maxNumOneEnd: 30
 
-  kafka.yml: |
+  redpanda.yml: |
     # Username for authentication
     username: ''
     # Password for authentication
@@ -391,15 +391,15 @@ data:
     producerAck:
     # Compression type to use (e.g., none, gzip, snappy)
     compressType: none
-    # List of Kafka broker addresses
-    address: [ "kafka-service:19094" ]
-    # Kafka topic for Redis integration
+    # List of Redpanda broker addresses
+    address: [ "redpanda-service:19094" ]
+    # Redpanda topic for Redis integration
     toRedisTopic: toRedis
-    # Kafka topic for MongoDB integration
+    # Redpanda topic for MongoDB integration
     toMongoTopic: toMongo
-    # Kafka topic for push notifications
+    # Redpanda topic for push notifications
     toPushTopic: toPush
-    # Kafka topic for offline push notifications
+    # Redpanda topic for offline push notifications
     toOfflinePushTopic: toOfflinePush
     # Consumer group ID for Redis topic
     toRedisGroupID: redis
