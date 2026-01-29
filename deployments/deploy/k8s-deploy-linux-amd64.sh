@@ -41,13 +41,12 @@ echo "$HARBOR_PASS" | docker login $HARBOR_URL -u $HARBOR_USER --password-stdin
 # Build Docker images for linux/amd64 and push to Harbor
 echo "Building and pushing Docker images for linux/amd64..."
 
-docker buildx create --name openim-builder || true
-
 services=("openim-api" "openim-crontask" "openim-msggateway" "openim-msgtransfer" "openim-push" "openim-rpc-auth" "openim-rpc-conversation" "openim-rpc-friend" "openim-rpc-group" "openim-rpc-msg" "openim-rpc-third" "openim-rpc-user")
 
 for service in "${services[@]}"; do
   IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${VERSION}"
-  docker buildx build -t $IMAGE_TAG build/images/$service/ --push
+  docker build -t $IMAGE_TAG build/images/$service/
+  docker push $IMAGE_TAG
 done
 
 # Update deployment YAMLs to use Harbor images
