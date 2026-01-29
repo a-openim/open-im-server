@@ -16,7 +16,8 @@ export GOOS=linux
 export GOARCH=amd64
 
 echo "Building binaries for linux/amd64..."
-mage build
+# Use mage build with explicit platform specification
+mage build linux_amd64
 
 # Login to private Harbor
 echo "Logging in to Harbor..."
