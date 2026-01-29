@@ -1,6 +1,6 @@
-address: [localhost:16379]
+address: [10.88.88.13:6379]
 username:
-password: openIM123
+password: root123456
 # redis Mode, including "standalone","cluster","sentinel"
 redisMode: "standalone"
 db: 0
