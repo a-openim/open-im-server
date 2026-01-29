@@ -92,8 +92,15 @@ GITHUB_TOKEN=
 
 # Check if the script is run as root
 function check_isroot() {
-    if [ "$EUID" -ne 0 ]; then
-    fatal "Please run the script as root or use sudo."
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+        # On macOS, Homebrew operations should be run as user, not root
+        if [ "$EUID" -eq 0 ]; then
+            warn "Running as root on macOS. Please run this script as a regular user with sudo access if needed for other operations."
+        fi
+    else
+        if [ "$EUID" -ne 0 ]; then
+            fatal "Please run the script as root or use sudo."
+        fi
     fi
 }
 
@@ -126,16 +133,27 @@ function install_tools() {
     local tools=("git" "make" "jq" "docker" "docker-compose")
     local install_cmd update_cmd os
 
-    if grep -qEi "debian|buntu|mint" /etc/os-release; then
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+        os="macOS"
+        install_cmd="brew install"
+        update_cmd="brew update"
+        if ! command -v brew &> /dev/null; then
+            fatal "Homebrew is not installed. Please install Homebrew first: https://brew.sh/"
+        fi
+        if [ "$EUID" -eq 0 ]; then
+            warn "Running as root on macOS. Homebrew operations cannot be performed as root. Please ensure git, make, jq, docker, docker-compose are installed manually."
+            return
+        fi
+    elif [ -f /etc/os-release ] && grep -qEi "debian|buntu|mint" /etc/os-release; then
         os="Ubuntu"
         install_cmd="sudo apt install -y"
         update_cmd="sudo apt update"
-    elif grep -qEi "fedora|rhel" /etc/os-release; then
+    elif [ -f /etc/os-release ] && grep -qEi "fedora|rhel" /etc/os-release; then
         os="CentOS"
         install_cmd="sudo yum install -y"
         update_cmd="sudo yum update"
     else
-        fatal "Unsupported OS, please use Ubuntu or CentOS."
+        fatal "Unsupported OS, please use Ubuntu, CentOS, or macOS."
     fi
 
     debug "Detected OS: $os"
