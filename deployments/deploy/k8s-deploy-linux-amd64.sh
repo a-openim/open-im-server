@@ -76,10 +76,6 @@ kubectl apply -f openim-config.yml -n $NAMESPACE
 
 # Apply services
 echo "Applying services..."
-kubectl apply -f kafka-service.yml -n $NAMESPACE
-kubectl apply -f minio-service.yml -n $NAMESPACE
-kubectl apply -f mongo-service.yml -n $NAMESPACE
-kubectl apply -f redis-service.yml -n $NAMESPACE
 kubectl apply -f openim-api-service.yml -n $NAMESPACE
 kubectl apply -f openim-msggateway-service.yml -n $NAMESPACE
 kubectl apply -f openim-msgtransfer-service.yml -n $NAMESPACE
