@@ -5,11 +5,10 @@ metadata:
   labels:
     app: redis
 spec:
-  type: ClusterIP
-  selector:
-    app: redis
+  type: ExternalName
+  externalName: 10.88.88.13
   ports:
     - name: redis-port
       protocol: TCP
-      port: 16379
+      port: 6379
       targetPort: 6379

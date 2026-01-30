@@ -5,6 +5,8 @@ metadata:
   labels:
     app: kafka
 spec:
+  type: ExternalName
+  externalName: 10.88.88.13
   ports:
     - name: plaintext
       port: 9092
@@ -15,6 +17,3 @@ spec:
     - name: external
       port: 19094
       targetPort: 9094
-  selector:
-    app: kafka
-  type: ClusterIP

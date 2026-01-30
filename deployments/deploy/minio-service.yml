@@ -4,15 +4,14 @@ kind: Service
 metadata:
   name: minio-service
 spec:
-  selector:
-    app: minio
+  type: ExternalName
+  externalName: 10.88.88.13
   ports:
     - name: minio
       protocol: TCP
-      port: 10005 # External port for accessing MinIO service
+      port: 9000 # External port for accessing MinIO service
       targetPort: 9000 # Container port for MinIO service
     - name: minio-console
       protocol: TCP
-      port: 19090 # External port for accessing MinIO console
+      port: 9090 # External port for accessing MinIO console
       targetPort: 9090 # Container port for MinIO console
-  type: NodePort

@@ -92,13 +92,6 @@ kubectl apply -f openim-rpc-msg-service.yml -n $NAMESPACE
 kubectl apply -f openim-rpc-third-service.yml -n $NAMESPACE
 kubectl apply -f openim-rpc-user-service.yml -n $NAMESPACE
 
-# Apply StatefulSets
-echo "Applying StatefulSets..."
-kubectl apply -f kafka-statefulset.yml -n $NAMESPACE
-kubectl apply -f minio-statefulset.yml -n $NAMESPACE
-kubectl apply -f mongo-statefulset.yml -n $NAMESPACE
-kubectl apply -f redis-statefulset.yml -n $NAMESPACE
-
 # Apply Deployments
 echo "Applying Deployments..."
 kubectl apply -f openim-api-deployment.yml -n $NAMESPACE

@@ -22,6 +22,9 @@ NAMESPACE=$NAMESPACE
 VERSION=v$(date +%y%m%d%H%M%S)
 echo $VERSION > .version
 
+# Note: Binaries are built inside the Docker container, so no pre-build needed
+GOOS=linux CGO_ENABLE=0 PLATFORMS=linux_amd64 mage build
+
 # Login to private Harbor
 echo "Logging in to Harbor..."
 # Set DOCKER_CONFIG to a temporary directory to avoid macOS Keychain issues
@@ -33,17 +36,6 @@ echo "$HARBOR_PASS" | docker login $HARBOR_URL -u $HARBOR_USER --password-stdin
 # Unset DOCKER_CONFIG to allow buildx to use default config
 unset DOCKER_CONFIG
 unset DOCKER_CREDS_STORE
-
-# Ensure Docker buildx is available
-if ! docker buildx version > /dev/null 2>&1; then
-  echo "Error: Docker buildx is not available."
-  echo "Please ensure:"
-  echo "1. Docker Desktop is installed (latest version)"
-  echo "2. Experimental features are enabled in Docker Desktop settings"
-  echo "3. Or install buildx manually: https://docs.docker.com/engine/reference/commandline/buildx/"
-  echo "4. Restart Docker Desktop after enabling experimental features"
-  exit 1
-fi
 
 # Check if buildx builder exists, create if not
 if ! docker buildx ls | grep -q openim-builder; then
@@ -107,24 +99,10 @@ kubectl apply -f redis-secret.yml -n $NAMESPACE
 echo "Applying ConfigMap..."
 kubectl apply -f openim-config.yml -n $NAMESPACE
 
-# Apply Deployments
-echo "Applying Deployments..."
-kubectl apply -f openim-api-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-crontask-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-msggateway-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-msgtransfer-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-push-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-auth-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-conversation-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-friend-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-group-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-msg-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-third-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-user-deployment.yml -n $NAMESPACE
-
-# Apply Ingress
-echo "Applying Ingress..."
-kubectl apply -f ingress.yml -n $NAMESPACE
+# Apply the selected service and deployment
+echo "Applying selected service: $selected_service"
+kubectl apply -f ${selected_service}-service.yml -n $NAMESPACE
+kubectl apply -f ${selected_service}-deployment.yml -n $NAMESPACE
 
 cd $ROOT_DIR
 echo "OpenIM Server Deployment for $selected_service completed successfully!"
