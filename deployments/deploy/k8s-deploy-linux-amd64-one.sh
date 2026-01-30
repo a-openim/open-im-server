@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# OpenIM Server Deployment Script for Linux AMD64
-# This script cross-compiles binaries for linux/amd64 on mac arm64, builds Docker images, pushes to private Harbor, and deploys to Kubernetes
+# OpenIM Server Deployment Script for Linux AMD64 - Single Service
+# This script cross-compiles binaries for linux/amd64 on mac arm64, builds Docker image for selected service, pushes to private Harbor, and deploys to Kubernetes
 
 set -e
 
@@ -19,15 +19,8 @@ echo $ROOT_DIR
 source deploy.confg
 
 NAMESPACE=$NAMESPACE
-VERSION=v3.8.3
-
-# Cross-compile binaries for linux/amd64
-export GOOS=linux
-export GOARCH=amd64
-
-echo "Building binaries for linux/amd64..."
-# Use mage build to compile all binaries for the set GOOS/GOARCH
-mage build
+VERSION=v$(date +%y%m%d%H%M%S)
+echo $VERSION > .version
 
 # Login to private Harbor
 echo "Logging in to Harbor..."
@@ -37,11 +30,53 @@ export DOCKER_CREDS_STORE=""
 # Create a config.json with credsStore set to empty string to prevent Keychain usage
 echo '{"auths":{},"credsStore":""}' > $DOCKER_CONFIG/config.json
 echo "$HARBOR_PASS" | docker login $HARBOR_URL -u $HARBOR_USER --password-stdin
+# Unset DOCKER_CONFIG to allow buildx to use default config
+unset DOCKER_CONFIG
+unset DOCKER_CREDS_STORE
 
-# Build Docker images for linux/amd64 and push to Harbor
-echo "Building and pushing Docker images for linux/amd64..."
+# Ensure Docker buildx is available
+if ! docker buildx version > /dev/null 2>&1; then
+  echo "Error: Docker buildx is not available."
+  echo "Please ensure:"
+  echo "1. Docker Desktop is installed (latest version)"
+  echo "2. Experimental features are enabled in Docker Desktop settings"
+  echo "3. Or install buildx manually: https://docs.docker.com/engine/reference/commandline/buildx/"
+  echo "4. Restart Docker Desktop after enabling experimental features"
+  exit 1
+fi
 
+# Check if buildx builder exists, create if not
+if ! docker buildx ls | grep -q openim-builder; then
+  docker buildx create openim-builder
+  docker buildx use openim-builder
+else
+  docker buildx use openim-builder
+fi
+
+# List of services
 services=("openim-api" "openim-crontask" "openim-msggateway" "openim-msgtransfer" "openim-push" "openim-rpc-auth" "openim-rpc-conversation" "openim-rpc-friend" "openim-rpc-group" "openim-rpc-msg" "openim-rpc-third" "openim-rpc-user")
+
+# Display services with numbers
+echo "Available services:"
+for i in "${!services[@]}"; do
+  echo "$((i+1)). ${services[$i]}"
+done
+
+# Prompt user to choose a service
+read -p "Enter the number of the service to build and deploy: " choice
+
+# Validate choice
+if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#services[@]}" ]; then
+  echo "Invalid choice. Please enter a number between 1 and ${#services[@]}."
+  exit 1
+fi
+
+# Get the selected service
+selected_service="${services[$((choice-1))]}"
+echo "Selected service: $selected_service"
+
+# Build Docker image for the selected service and push to Harbor
+services=("$selected_service")
 
 for service in "${services[@]}"; do
   IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${VERSION}"
@@ -52,19 +87,17 @@ for service in "${services[@]}"; do
   echo "Pushed $IMAGE_TAG"
 done
 
-# Update deployment YAMLs to use Harbor images
-echo "Updating deployment YAMLs to use Harbor images..."
-for service in "${services[@]}"; do
-  DEPLOYMENT_FILE="deployments/deploy/${service}-deployment.yml"
-  IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${VERSION}"
-  sed -i.bak "s|image: openim/${service}:.*|image: ${IMAGE_TAG}|g" $DEPLOYMENT_FILE
-done
+# Update deployment YAML for the selected service to use Harbor image
+echo "Updating deployment YAML for $selected_service to use Harbor image..."
+DEPLOYMENT_FILE="deployments/deploy/${selected_service}-deployment.yml"
+sed -i.bak "s|image: openim/${selected_service}:.*|image: ${IMAGE_TAG}|g" $DEPLOYMENT_FILE
 
 # Deploy to Kubernetes
 echo "Starting OpenIM Server Deployment in namespace: $NAMESPACE"
 
 # Apply secrets first
 echo "Applying secrets..."
+cd deployments/deploy
 kubectl apply -f kafka-secret.yml -n $NAMESPACE
 kubectl apply -f minio-secret.yml -n $NAMESPACE
 kubectl apply -f mongo-secret.yml -n $NAMESPACE
@@ -73,31 +106,6 @@ kubectl apply -f redis-secret.yml -n $NAMESPACE
 # Apply ConfigMap
 echo "Applying ConfigMap..."
 kubectl apply -f openim-config.yml -n $NAMESPACE
-
-# Apply services
-echo "Applying services..."
-kubectl apply -f kafka-service.yml -n $NAMESPACE
-kubectl apply -f minio-service.yml -n $NAMESPACE
-kubectl apply -f mongo-service.yml -n $NAMESPACE
-kubectl apply -f redis-service.yml -n $NAMESPACE
-kubectl apply -f openim-api-service.yml -n $NAMESPACE
-kubectl apply -f openim-msggateway-service.yml -n $NAMESPACE
-kubectl apply -f openim-msgtransfer-service.yml -n $NAMESPACE
-kubectl apply -f openim-push-service.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-auth-service.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-conversation-service.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-friend-service.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-group-service.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-msg-service.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-third-service.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-user-service.yml -n $NAMESPACE
-
-# Apply StatefulSets
-echo "Applying StatefulSets..."
-kubectl apply -f kafka-statefulset.yml -n $NAMESPACE
-kubectl apply -f minio-statefulset.yml -n $NAMESPACE
-kubectl apply -f mongo-statefulset.yml -n $NAMESPACE
-kubectl apply -f redis-statefulset.yml -n $NAMESPACE
 
 # Apply Deployments
 echo "Applying Deployments..."
@@ -118,7 +126,8 @@ kubectl apply -f openim-rpc-user-deployment.yml -n $NAMESPACE
 echo "Applying Ingress..."
 kubectl apply -f ingress.yml -n $NAMESPACE
 
-echo "OpenIM Server Deployment completed successfully!"
+cd $ROOT_DIR
+echo "OpenIM Server Deployment for $selected_service completed successfully!"
 echo "You can check the status with: kubectl get pods -n $NAMESPACE"
 echo "Access the API at: http://your-ingress-host/openim-api"
 echo "Access the Message Gateway at: http://your-ingress-host/openim-msggateway"
