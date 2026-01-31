@@ -57,18 +57,11 @@ echo "Updating deployment YAMLs to use Harbor images..."
 for service in "${services[@]}"; do
   DEPLOYMENT_FILE="deployments/deploy/${service}-deployment.yml"
   IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${VERSION}"
-  sed -i.bak "s|image: openim/${service}:.*|image: ${IMAGE_TAG}|g" $DEPLOYMENT_FILE
+  sed -i.bak "s|image:.*${service}:.*|image: ${IMAGE_TAG}|g" $DEPLOYMENT_FILE
 done
 
 # Deploy to Kubernetes
 echo "Starting OpenIM Server Deployment in namespace: $NAMESPACE"
-
-# Apply secrets first
-echo "Applying secrets..."
-kubectl apply -f kafka-secret.yml -n $NAMESPACE
-kubectl apply -f minio-secret.yml -n $NAMESPACE
-kubectl apply -f mongo-secret.yml -n $NAMESPACE
-kubectl apply -f redis-secret.yml -n $NAMESPACE
 
 # Apply ConfigMap
 echo "Applying ConfigMap..."
