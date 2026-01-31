@@ -44,15 +44,15 @@ data:
     # URI for database connection, leave empty if using address and credential settings directly
     uri: ''
     # List of MongoDB server addresses
-    address: [ mongo-service:37017 ]
+    address: [ 10.88.88.13:27017 ]
     # Name of the database
     database: openim_v3
     # Username for database authentication
-    username: ''  # openIM
+    username: root  # openIM
     # Password for database authentication
-    password: '' # openIM123
+    password: root123456 # openIM123
     # Authentication source for database authentication, if use root user, set it to admin
-    authSource: openim_v3
+    authSource: admin
     # Maximum number of connections in the connection pool
     maxPoolSize: 100
     # Maximum number of retry attempts for a failed database connection
@@ -392,7 +392,7 @@ data:
     # Compression type to use (e.g., none, gzip, snappy)
     compressType: none
     # List of Kafka broker addresses
-    address: [ "kafka-service:19094" ]
+    address: [ "10.88.88.13:9092" ]
     # Kafka topic for Redis integration
     toRedisTopic: toRedis
     # Kafka topic for MongoDB integration
@@ -425,9 +425,9 @@ data:
       insecureSkipVerify: false
 
   redis.yml: |
-    address: [ "redis-service:16379" ]
+    address: [ "10.88.88.13:6379" ]
     username:
-    password:  # openIM123
+    password: root123456
     clusterMode: false
     db: 0
     maxRetry: 10
@@ -437,15 +437,15 @@ data:
     # Name of the bucket in MinIO
     bucket: openim
     # Access key ID for MinIO authentication
-    accessKeyID: root   
+    accessKeyID: root
     # Secret access key for MinIO authentication
-    secretAccessKey:    # openIM123
+    secretAccessKey: root123456    # openIM123
     # Session token for MinIO authentication (optional)
     sessionToken:
     # Internal address of the MinIO server
-    internalAddress: minio-service:10005
+    internalAddress: 10.88.88.13:9000
     # External address of the MinIO server, accessible from outside. Supports both HTTP and HTTPS using a domain name
-    externalAddress: http://minio-service:10005
+    externalAddress: http://10.88.88.13:9000
     # Flag to enable or disable public read access to the bucket
     publicRead: "false"
 
@@ -1054,3 +1054,4 @@ data:
           - targets: [ internal_ip:12320 ]
             labels:
               namespace: default
+

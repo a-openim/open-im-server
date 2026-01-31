@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 
 	"github.com/IBM/sarama"
@@ -15,6 +16,7 @@ func BuildConsumerGroupConfig(conf *Config, initial int64, autoCommitEnable bool
 	kfk.Consumer.Offsets.AutoCommit.Enable = autoCommitEnable
 	kfk.Consumer.Return.Errors = false
 	if conf.Username != "" || conf.Password != "" {
+		fmt.Printf("kafka sarama set sasl username:%s password:%s\n", conf.Username, conf.Password)
 		kfk.Net.SASL.Enable = true
 		kfk.Net.SASL.User = conf.Username
 		kfk.Net.SASL.Password = conf.Password

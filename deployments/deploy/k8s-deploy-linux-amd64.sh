@@ -3,8 +3,6 @@
 # OpenIM Server Deployment Script for Linux AMD64
 # This script cross-compiles binaries for linux/amd64 on mac arm64, builds Docker images, pushes to private Harbor, and deploys to Kubernetes
 
-# Note: set -e is removed to allow error handling and continuation on build failures
-
 # Check if running as root
 if [ "$EUID" -eq 0 ]; then
   echo "This script should not be run as root due to Docker credential storage issues on macOS."
@@ -13,19 +11,24 @@ if [ "$EUID" -eq 0 ]; then
 fi
 
 ROOT_DIR=$(pwd)
-echo $ROOT_DIR
+echo "Current Directory: $ROOT_DIR"
 
 # Source the deployment config
-source deploy.confg
+if [ -f "deploy.confg" ]; then
+  source deploy.confg
+else
+  echo "Error: deploy.confg not found!"
+  exit 1
+fi
 
 NAMESPACE=$NAMESPACE
 VERSION=v$(date +%y%m%d%H%M%S)
+FAILED_SERVICES=()
 
 # Cross-compile binaries for linux/amd64
 export GOOS=linux
 export GOARCH=amd64
 
-# Note: Binaries are built inside the Docker container, so no pre-build needed
 # Ask user whether to run mage build
 read -p "Do you want to run mage build? (y/n): " run_build
 if [[ "$run_build" =~ ^[Yy]$ ]]; then
@@ -37,18 +40,15 @@ fi
 
 # Login to private Harbor
 echo "Logging in to Harbor..."
-# Set DOCKER_CONFIG to a temporary directory to avoid macOS Keychain issues
 export DOCKER_CONFIG=$(mktemp -d)
 export DOCKER_CREDS_STORE=""
-# Create a config.json with credsStore set to empty string to prevent Keychain usage
 echo '{"auths":{},"credsStore":""}' > $DOCKER_CONFIG/config.json
 echo "$HARBOR_PASS" | docker login $HARBOR_URL -u $HARBOR_USER --password-stdin
 
-# Unset DOCKER_CONFIG to allow buildx to use default config
 unset DOCKER_CONFIG
 unset DOCKER_CREDS_STORE
 
-# Check if buildx builder exists, create if not
+# Check if buildx builder exists
 if ! docker buildx ls | grep -q openim-builder; then
   docker buildx create openim-builder
   docker buildx use openim-builder
@@ -56,45 +56,82 @@ else
   docker buildx use openim-builder
 fi
 
+# Services list
+services=("openim-api" "openim-crontask" "openim-msggateway" "openim-msgtransfer" "openim-push" "openim-rpc-auth" "openim-rpc-conversation" "openim-rpc-friend" "openim-rpc-group" "openim-rpc-msg" "openim-rpc-third" "openim-rpc-user")
+
 # Ask user whether to run docker build
 read -p "Do you want to run docker build? (y/n): " run_docker_build
 if [[ "$run_docker_build" =~ ^[Yy]$ ]]; then
-  # Build Docker images for linux/amd64 and push to Harbor
   echo "Building and pushing Docker images for linux/amd64..."
-
-  services=("openim-api" "openim-crontask" "openim-msggateway" "openim-msgtransfer" "openim-push" "openim-rpc-auth" "openim-rpc-conversation" "openim-rpc-friend" "openim-rpc-group" "openim-rpc-msg" "openim-rpc-third" "openim-rpc-user")
 
   for service in "${services[@]}"; do
     IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${VERSION}"
+    echo "----------------------------------------------------------"
+    echo "Processing: $service"
+    
+    # 执行构建
     docker buildx build --platform linux/amd64 --load -t $IMAGE_TAG -f build/images/$service/Dockerfile .
-    echo "Docker buildx build completed for $service. Checking image architecture:"
-    docker inspect $IMAGE_TAG | grep -A 5 '"Architecture"'
-    docker push $IMAGE_TAG
-    echo "Pushed $IMAGE_TAG"
+    
+    # 检查上一步执行状态
+    if [ $? -eq 0 ]; then
+      echo "Successfully built $service. Pushing..."
+      docker push $IMAGE_TAG
+      if [ $? -eq 0 ]; then
+         echo -e "\033[32mSUCCESS: $service pushed.\033[0m"
+      else
+         echo -e "\033[31mERROR: Push failed for $service\033[0m"
+         FAILED_SERVICES+=("$service (Push Failed)")
+      fi
+    else
+      echo -e "\033[31mERROR: Build failed for $service\033[0m"
+      FAILED_SERVICES+=("$service (Build Failed)")
+    fi
   done
-  # Update .version file with new version
+
+  # 打印最终汇总报告
+  echo "=========================================================="
+  if [ ${#FAILED_SERVICES[@]} -ne 0 ]; then
+    echo -e "\033[31mBUILD SUMMARY: THE FOLLOWING SERVICES FAILED:\033[0m"
+    for failed in "${FAILED_SERVICES[@]}"; do
+      echo -e "\033[31m- $failed\033[0m"
+    done
+    echo "=========================================================="
+    read -p "Some images failed to build. Do you want to continue deployment anyway? (y/n): " continue_deploy
+    if [[ ! "$continue_deploy" =~ ^[Yy]$ ]]; then
+      echo "Deployment aborted."
+      exit 1
+    fi
+  else
+    echo -e "\033[32mBUILD SUMMARY: ALL SERVICES BUILT AND PUSHED SUCCESSFULLY.\033[0m"
+    echo "=========================================================="
+  fi
+
+  # Update .version file
   echo $VERSION > .version
 
 else
   echo "Skipping docker build..."
-  # Read version from .version file for deployment YAML update
-  EXISTING_VERSION=$(cat .version)
-  echo "Using existing version: $EXISTING_VERSION"
-  # Set services for deployment YAML update (use existing images)
-  services=("openim-api" "openim-crontask" "openim-msggateway" "openim-msgtransfer" "openim-push" "openim-rpc-auth" "openim-rpc-conversation" "openim-rpc-friend" "openim-rpc-group" "openim-rpc-msg" "openim-rpc-third" "openim-rpc-user")
+  if [ -f ".version" ]; then
+    EXISTING_VERSION=$(cat .version)
+    echo "Using existing version: $EXISTING_VERSION"
+    VERSION=$EXISTING_VERSION
+  else
+    echo "Error: .version file not found. Cannot skip build without a prior version."
+    exit 1
+  fi
 fi
 
-# Update deployment YAMLs to use Harbor images
+# Update deployment YAMLs
 echo "Updating deployment YAMLs to use Harbor images..."
 for service in "${services[@]}"; do
   DEPLOYMENT_FILE="deployments/deploy/${service}-deployment.yml"
-  # Use EXISTING_VERSION if docker build was skipped, otherwise use VERSION
-  if [[ "$run_docker_build" =~ ^[Yy]$ ]]; then
-    IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${VERSION}"
+  IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${VERSION}"
+  if [ -f "$DEPLOYMENT_FILE" ]; then
+    sed -i.bak "s|image:.*${service}:.*|image: ${IMAGE_TAG}|g" $DEPLOYMENT_FILE
+    echo "Updated $DEPLOYMENT_FILE"
   else
-    IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${EXISTING_VERSION}"
+    echo "Warning: $DEPLOYMENT_FILE not found, skipping..."
   fi
-  sed -i.bak "s|image:.*${service}:.*|image: ${IMAGE_TAG}|g" $DEPLOYMENT_FILE
 done
 
 # Deploy to Kubernetes
@@ -104,40 +141,32 @@ echo "Starting OpenIM Server Deployment in namespace: $NAMESPACE"
 echo "Applying ConfigMap..."
 kubectl apply -f deployments/deploy/openim-config.yml -n $NAMESPACE
 
-# Apply services
+# Apply services (batch apply)
 echo "Applying services..."
-kubectl apply -f deployments/deploy/openim-api-service.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-msggateway-service.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-msgtransfer-service.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-push-service.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-rpc-auth-service.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-rpc-conversation-service.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-rpc-friend-service.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-rpc-group-service.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-rpc-msg-service.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-rpc-third-service.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-rpc-user-service.yml -n $NAMESPACE
+for service in "${services[@]}"; do
+    FILE="deployments/deploy/${service}-service.yml"
+    if [ -f "$FILE" ]; then
+        kubectl apply -f "$FILE" -n $NAMESPACE
+    fi
+done
 
-# Apply Deployments
+# Apply Deployments (batch apply)
 echo "Applying Deployments..."
-kubectl apply -f deployments/deploy/openim-api-deployment.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-crontask-deployment.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-msggateway-deployment.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-msgtransfer-deployment.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-push-deployment.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-rpc-auth-deployment.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-rpc-conversation-deployment.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-rpc-friend-deployment.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-rpc-group-deployment.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-rpc-msg-deployment.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-rpc-third-deployment.yml -n $NAMESPACE
-kubectl apply -f deployments/deploy/openim-rpc-user-deployment.yml -n $NAMESPACE
+for service in "${services[@]}"; do
+    FILE="deployments/deploy/${service}-deployment.yml"
+    if [ -f "$FILE" ]; then
+        kubectl apply -f "$FILE" -n $NAMESPACE
+    fi
+done
 
 # Apply Ingress
 echo "Applying Ingress..."
-kubectl apply -f deployments/deploy/ingress.yml -n $NAMESPACE
+if [ -f "deployments/deploy/ingress.yml" ]; then
+    kubectl apply -f deployments/deploy/ingress.yml -n $NAMESPACE
+fi
 
-echo "OpenIM Server Deployment completed successfully!"
-echo "You can check the status with: kubectl get pods -n $NAMESPACE"
-echo "Access the API at: http://your-ingress-host/openim-api"
-echo "Access the Message Gateway at: http://your-ingress-host/openim-msggateway"
+echo "----------------------------------------------------------"
+echo "OpenIM Server Deployment process finished!"
+echo "Check pods: kubectl get pods -n $NAMESPACE"
+
+say -v Meijia "congratulations"

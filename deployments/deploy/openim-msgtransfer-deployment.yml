@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: openim-msgtransfer-container
-          image: 10.88.88.13:81/app/openim-msgtransfer:v260131132941
+          image: 10.88.88.13:81/app/openim-msgtransfer:v260131140326
           env:
             - name: CONFIG_PATH
               value: "/config"
@@ -23,8 +23,6 @@ spec:
             - name: IMENV_MONGODB_USERNAME
               value: "root"
             - name: IMENV_MONGODB_PASSWORD
-              value: "root123456"
-            - name: IMENV_KAFKA_PASSWORD
               value: "root123456"
           volumeMounts:
             - name: openim-config
