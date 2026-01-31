@@ -3,7 +3,7 @@
 # OpenIM Server Deployment Script for Linux AMD64
 # This script cross-compiles binaries for linux/amd64 on mac arm64, builds Docker images, pushes to private Harbor, and deploys to Kubernetes
 
-set -e
+# Note: set -e is removed to allow error handling and continuation on build failures
 
 # Check if running as root
 if [ "$EUID" -eq 0 ]; then
@@ -20,7 +20,6 @@ source deploy.confg
 
 NAMESPACE=$NAMESPACE
 VERSION=v$(date +%y%m%d%H%M%S)
-echo $VERSION > .version
 
 # Cross-compile binaries for linux/amd64
 export GOOS=linux
@@ -57,25 +56,44 @@ else
   docker buildx use openim-builder
 fi
 
-# Build Docker images for linux/amd64 and push to Harbor
-echo "Building and pushing Docker images for linux/amd64..."
+# Ask user whether to run docker build
+read -p "Do you want to run docker build? (y/n): " run_docker_build
+if [[ "$run_docker_build" =~ ^[Yy]$ ]]; then
+  # Build Docker images for linux/amd64 and push to Harbor
+  echo "Building and pushing Docker images for linux/amd64..."
 
-services=("openim-api" "openim-crontask" "openim-msggateway" "openim-msgtransfer" "openim-push" "openim-rpc-auth" "openim-rpc-conversation" "openim-rpc-friend" "openim-rpc-group" "openim-rpc-msg" "openim-rpc-third" "openim-rpc-user")
+  services=("openim-api" "openim-crontask" "openim-msggateway" "openim-msgtransfer" "openim-push" "openim-rpc-auth" "openim-rpc-conversation" "openim-rpc-friend" "openim-rpc-group" "openim-rpc-msg" "openim-rpc-third" "openim-rpc-user")
 
-for service in "${services[@]}"; do
-  IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${VERSION}"
-  docker buildx build --platform linux/amd64 --load -t $IMAGE_TAG -f build/images/$service/Dockerfile .
-  echo "Docker buildx build completed for $service. Checking image architecture:"
-  docker inspect $IMAGE_TAG | grep -A 5 '"Architecture"'
-  docker push $IMAGE_TAG
-  echo "Pushed $IMAGE_TAG"
-done
+  for service in "${services[@]}"; do
+    IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${VERSION}"
+    docker buildx build --platform linux/amd64 --load -t $IMAGE_TAG -f build/images/$service/Dockerfile .
+    echo "Docker buildx build completed for $service. Checking image architecture:"
+    docker inspect $IMAGE_TAG | grep -A 5 '"Architecture"'
+    docker push $IMAGE_TAG
+    echo "Pushed $IMAGE_TAG"
+  done
+  # Update .version file with new version
+  echo $VERSION > .version
+
+else
+  echo "Skipping docker build..."
+  # Read version from .version file for deployment YAML update
+  EXISTING_VERSION=$(cat .version)
+  echo "Using existing version: $EXISTING_VERSION"
+  # Set services for deployment YAML update (use existing images)
+  services=("openim-api" "openim-crontask" "openim-msggateway" "openim-msgtransfer" "openim-push" "openim-rpc-auth" "openim-rpc-conversation" "openim-rpc-friend" "openim-rpc-group" "openim-rpc-msg" "openim-rpc-third" "openim-rpc-user")
+fi
 
 # Update deployment YAMLs to use Harbor images
 echo "Updating deployment YAMLs to use Harbor images..."
 for service in "${services[@]}"; do
   DEPLOYMENT_FILE="deployments/deploy/${service}-deployment.yml"
-  IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${VERSION}"
+  # Use EXISTING_VERSION if docker build was skipped, otherwise use VERSION
+  if [[ "$run_docker_build" =~ ^[Yy]$ ]]; then
+    IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${VERSION}"
+  else
+    IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${EXISTING_VERSION}"
+  fi
   sed -i.bak "s|image:.*${service}:.*|image: ${IMAGE_TAG}|g" $DEPLOYMENT_FILE
 done
 

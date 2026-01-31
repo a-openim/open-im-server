@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: third-rpc-server-container
-          image: openim/openim-rpc-third:v3.8.3
+          image: 10.88.88.13:81/app/openim-rpc-third:v260131132941
           env:
             - name: CONFIG_PATH
               value: "/config"

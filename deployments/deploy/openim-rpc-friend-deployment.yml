@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: friend-rpc-server-container
-          image: openim/openim-rpc-friend:v3.8.3
+          image: 10.88.88.13:81/app/openim-rpc-friend:v260131132941
           env:
             - name: CONFIG_PATH
               value: "/config"

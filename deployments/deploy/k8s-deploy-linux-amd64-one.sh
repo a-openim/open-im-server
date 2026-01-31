@@ -20,7 +20,6 @@ source deploy.confg
 
 NAMESPACE=$NAMESPACE
 VERSION=v$(date +%y%m%d%H%M%S)
-echo $VERSION > .version
 
 # Note: Binaries are built inside the Docker container, so no pre-build needed
 # Ask user whether to run mage build
@@ -74,17 +73,30 @@ fi
 selected_service="${services[$((choice-1))]}"
 echo "Selected service: $selected_service"
 
-# Build Docker image for the selected service and push to Harbor
-services=("$selected_service")
+# Ask user whether to run docker build
+read -p "Do you want to run docker build? (y/n): " run_docker_build
+if [[ "$run_docker_build" =~ ^[Yy]$ ]]; then
+  # Build Docker image for the selected service and push to Harbor
+  services=("$selected_service")
 
-for service in "${services[@]}"; do
-  IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${VERSION}"
-  docker buildx build --platform linux/amd64 --load -t $IMAGE_TAG -f build/images/$service/Dockerfile .
-  echo "Docker buildx build completed for $service. Checking image architecture:"
-  docker inspect $IMAGE_TAG | grep -A 5 '"Architecture"'
-  docker push $IMAGE_TAG
-  echo "Pushed $IMAGE_TAG"
-done
+  for service in "${services[@]}"; do
+    IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${VERSION}"
+    docker buildx build --platform linux/amd64 --load -t $IMAGE_TAG -f build/images/$service/Dockerfile .
+    echo "Docker buildx build completed for $service. Checking image architecture:"
+    docker inspect $IMAGE_TAG | grep -A 5 '"Architecture"'
+    docker push $IMAGE_TAG
+    echo "Pushed $IMAGE_TAG"
+  done
+
+  echo $VERSION > .version
+
+else
+  echo "Skipping docker build..."
+  # Read version from .version file for deployment YAML update
+  EXISTING_VERSION=$(cat .version)
+  IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${selected_service}:${EXISTING_VERSION}"
+  echo "Using existing version: $EXISTING_VERSION"
+fi
 
 # Update deployment YAML for the selected service to use Harbor image
 echo "Updating deployment YAML for $selected_service to use Harbor image..."
