@@ -26,12 +26,12 @@ echo $VERSION > .version
 export GOOS=linux
 export GOARCH=amd64
 
+# Note: Binaries are built inside the Docker container, so no pre-build needed
 # Ask user whether to run mage build
 read -p "Do you want to run mage build? (y/n): " run_build
 if [[ "$run_build" =~ ^[Yy]$ ]]; then
-  echo "Building binaries for linux/amd64..."
-  # Use mage build to compile all binaries for the set GOOS/GOARCH
-  mage build
+  echo "Running mage build..."
+  GOOS=linux CGO_ENABLE=0 PLATFORMS=linux_amd64 mage build
 else
   echo "Skipping mage build..."
 fi
