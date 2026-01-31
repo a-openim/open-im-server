@@ -19,15 +19,22 @@ echo $ROOT_DIR
 source deploy.confg
 
 NAMESPACE=$NAMESPACE
-VERSION=v3.8.3
+VERSION=v$(date +%y%m%d%H%M%S)
+echo $VERSION > .version
 
 # Cross-compile binaries for linux/amd64
 export GOOS=linux
 export GOARCH=amd64
 
-echo "Building binaries for linux/amd64..."
-# Use mage build to compile all binaries for the set GOOS/GOARCH
-mage build
+# Ask user whether to run mage build
+read -p "Do you want to run mage build? (y/n): " run_build
+if [[ "$run_build" =~ ^[Yy]$ ]]; then
+  echo "Building binaries for linux/amd64..."
+  # Use mage build to compile all binaries for the set GOOS/GOARCH
+  mage build
+else
+  echo "Skipping mage build..."
+fi
 
 # Login to private Harbor
 echo "Logging in to Harbor..."
