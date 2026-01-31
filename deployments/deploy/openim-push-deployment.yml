@@ -19,15 +19,9 @@ spec:
             - name: CONFIG_PATH
               value: "/config"
             - name: IMENV_REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: openim-redis-secret
-                  key: redis-password
+              value: "root123456"
             - name: IMENV_KAFKA_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: openim-kafka-secret
-                  key: kafka-password
+              value: "root123456"
           volumeMounts:
             - name: openim-config
               mountPath: "/config"

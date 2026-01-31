@@ -19,30 +19,15 @@ spec:
             - name: CONFIG_PATH
               value: "/config"
             - name: IMENV_MINIO_ACCESSKEYID
-              valueFrom:
-                secretKeyRef:
-                  name: openim-minio-secret
-                  key: minio-root-user
+              value: "root"
             - name: IMENV_MINIO_SECRETACCESSKEY
-              valueFrom:
-                secretKeyRef:
-                  name: openim-minio-secret
-                  key: minio-root-password
+              value: "root123456"
             - name: IMENV_REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: openim-redis-secret
-                  key: redis-password
+              value: "root123456"
             - name: IMENV_MONGODB_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: openim-mongo-secret
-                  key: mongo_openim_username
+              value: "root"
             - name: IMENV_MONGODB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: openim-mongo-secret
-                  key: mongo_openim_password
+              value: "root123456"
           volumeMounts:
             - name: openim-config
               mountPath: "/config"
