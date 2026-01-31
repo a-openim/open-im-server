@@ -45,8 +45,8 @@ services=("openim-api" "openim-crontask" "openim-msggateway" "openim-msgtransfer
 
 for service in "${services[@]}"; do
   IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${VERSION}"
-  docker buildx build --platform linux/amd64 --load -t $IMAGE_TAG -f build/images/$service/Dockerfile .
-  echo "Docker buildx build completed for $service. Checking image architecture:"
+  docker build -t $IMAGE_TAG -f build/images/$service/Dockerfile .
+  echo "Docker build completed for $service. Checking image architecture:"
   docker inspect $IMAGE_TAG | grep -A 5 '"Architecture"'
   docker push $IMAGE_TAG
   echo "Pushed $IMAGE_TAG"
