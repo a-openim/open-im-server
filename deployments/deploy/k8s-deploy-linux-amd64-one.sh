@@ -33,6 +33,17 @@ export DOCKER_CREDS_STORE=""
 # Create a config.json with credsStore set to empty string to prevent Keychain usage
 echo '{"auths":{},"credsStore":""}' > $DOCKER_CONFIG/config.json
 echo "$HARBOR_PASS" | docker login $HARBOR_URL -u $HARBOR_USER --password-stdin
+# Unset DOCKER_CONFIG to allow buildx to use default config
+unset DOCKER_CONFIG
+unset DOCKER_CREDS_STORE
+
+# Check if buildx builder exists, create if not
+if ! docker buildx ls | grep -q openim-builder; then
+  docker buildx create openim-builder
+  docker buildx use openim-builder
+else
+  docker buildx use openim-builder
+fi
 
 # List of services
 services=("openim-api" "openim-crontask" "openim-msggateway" "openim-msgtransfer" "openim-push" "openim-rpc-auth" "openim-rpc-conversation" "openim-rpc-friend" "openim-rpc-group" "openim-rpc-msg" "openim-rpc-third" "openim-rpc-user")
@@ -61,8 +72,8 @@ services=("$selected_service")
 
 for service in "${services[@]}"; do
   IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${VERSION}"
-  docker build -t $IMAGE_TAG -f build/images/$service/Dockerfile .
-  echo "Docker build completed for $service. Checking image architecture:"
+  docker buildx build --platform linux/amd64 --load -t $IMAGE_TAG -f build/images/$service/Dockerfile .
+  echo "Docker buildx build completed for $service. Checking image architecture:"
   docker inspect $IMAGE_TAG | grep -A 5 '"Architecture"'
   docker push $IMAGE_TAG
   echo "Pushed $IMAGE_TAG"
@@ -78,12 +89,12 @@ echo "Starting OpenIM Server Deployment in namespace: $NAMESPACE"
 
 # Apply ConfigMap
 echo "Applying ConfigMap..."
-kubectl apply -f openim-config.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-config.yml -n $NAMESPACE
 
 # Apply the selected service and deployment
 echo "Applying selected service: $selected_service"
-kubectl apply -f ${selected_service}-service.yml -n $NAMESPACE
-kubectl apply -f ${selected_service}-deployment.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/${selected_service}-service.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/${selected_service}-deployment.yml -n $NAMESPACE
 
 cd $ROOT_DIR
 echo "OpenIM Server Deployment for $selected_service completed successfully!"

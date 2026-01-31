@@ -38,6 +38,18 @@ export DOCKER_CREDS_STORE=""
 echo '{"auths":{},"credsStore":""}' > $DOCKER_CONFIG/config.json
 echo "$HARBOR_PASS" | docker login $HARBOR_URL -u $HARBOR_USER --password-stdin
 
+# Unset DOCKER_CONFIG to allow buildx to use default config
+unset DOCKER_CONFIG
+unset DOCKER_CREDS_STORE
+
+# Check if buildx builder exists, create if not
+if ! docker buildx ls | grep -q openim-builder; then
+  docker buildx create openim-builder
+  docker buildx use openim-builder
+else
+  docker buildx use openim-builder
+fi
+
 # Build Docker images for linux/amd64 and push to Harbor
 echo "Building and pushing Docker images for linux/amd64..."
 
@@ -45,8 +57,8 @@ services=("openim-api" "openim-crontask" "openim-msggateway" "openim-msgtransfer
 
 for service in "${services[@]}"; do
   IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${VERSION}"
-  docker build -t $IMAGE_TAG -f build/images/$service/Dockerfile .
-  echo "Docker build completed for $service. Checking image architecture:"
+  docker buildx build --platform linux/amd64 --load -t $IMAGE_TAG -f build/images/$service/Dockerfile .
+  echo "Docker buildx build completed for $service. Checking image architecture:"
   docker inspect $IMAGE_TAG | grep -A 5 '"Architecture"'
   docker push $IMAGE_TAG
   echo "Pushed $IMAGE_TAG"
@@ -65,40 +77,40 @@ echo "Starting OpenIM Server Deployment in namespace: $NAMESPACE"
 
 # Apply ConfigMap
 echo "Applying ConfigMap..."
-kubectl apply -f openim-config.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-config.yml -n $NAMESPACE
 
 # Apply services
 echo "Applying services..."
-kubectl apply -f openim-api-service.yml -n $NAMESPACE
-kubectl apply -f openim-msggateway-service.yml -n $NAMESPACE
-kubectl apply -f openim-msgtransfer-service.yml -n $NAMESPACE
-kubectl apply -f openim-push-service.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-auth-service.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-conversation-service.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-friend-service.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-group-service.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-msg-service.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-third-service.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-user-service.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-api-service.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-msggateway-service.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-msgtransfer-service.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-push-service.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-rpc-auth-service.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-rpc-conversation-service.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-rpc-friend-service.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-rpc-group-service.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-rpc-msg-service.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-rpc-third-service.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-rpc-user-service.yml -n $NAMESPACE
 
 # Apply Deployments
 echo "Applying Deployments..."
-kubectl apply -f openim-api-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-crontask-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-msggateway-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-msgtransfer-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-push-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-auth-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-conversation-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-friend-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-group-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-msg-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-third-deployment.yml -n $NAMESPACE
-kubectl apply -f openim-rpc-user-deployment.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-api-deployment.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-crontask-deployment.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-msggateway-deployment.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-msgtransfer-deployment.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-push-deployment.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-rpc-auth-deployment.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-rpc-conversation-deployment.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-rpc-friend-deployment.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-rpc-group-deployment.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-rpc-msg-deployment.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-rpc-third-deployment.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/openim-rpc-user-deployment.yml -n $NAMESPACE
 
 # Apply Ingress
 echo "Applying Ingress..."
-kubectl apply -f ingress.yml -n $NAMESPACE
+kubectl apply -f deployments/deploy/ingress.yml -n $NAMESPACE
 
 echo "OpenIM Server Deployment completed successfully!"
 echo "You can check the status with: kubectl get pods -n $NAMESPACE"
