@@ -13,11 +13,14 @@ fi
 ROOT_DIR=$(pwd)
 echo "Current Directory: $ROOT_DIR"
 
+# Create version directory if it doesn't exist
+mkdir -p deployments/version
+
 # Source the deployment config
-if [ -f "deploy.confg" ]; then
-  source deploy.confg
+if [ -f "deployments/deploy.confg" ]; then
+  source deployments/deploy.confg
 else
-  echo "Error: deploy.confg not found!"
+  echo "Error: deployments/deploy.confg not found!"
   exit 1
 fi
 
@@ -73,7 +76,7 @@ if [[ "$run_docker_build" =~ ^[Yy]$ ]]; then
       if [ $? -eq 0 ]; then
          echo -e "\033[32mSUCCESS: $service pushed.\033[0m"
          # Write version to individual service file
-         VERSION_FILE=".version.${service}"
+         VERSION_FILE="deployments/version/.version.${service}"
          echo $VERSION > $VERSION_FILE
          echo "Version saved to $VERSION_FILE"
       else
@@ -109,7 +112,7 @@ else
   # Check if all service version files exist
   ALL_VERSIONS_EXIST=true
   for service in "${services[@]}"; do
-    VERSION_FILE=".version.${service}"
+    VERSION_FILE="deployments/version/.version.${service}"
     if [ ! -f "$VERSION_FILE" ]; then
       echo "Error: $VERSION_FILE not found. Cannot skip build without a prior version for $service."
       ALL_VERSIONS_EXIST=false
@@ -122,7 +125,7 @@ else
 
   echo "Using existing versions from individual service version files:"
   for service in "${services[@]}"; do
-    VERSION_FILE=".version.${service}"
+    VERSION_FILE="deployments/version/.version.${service}"
     EXISTING_VERSION=$(cat $VERSION_FILE)
     echo "  $service: $EXISTING_VERSION"
   done
@@ -132,7 +135,7 @@ fi
 echo "Updating deployment YAMLs to use Harbor images..."
 for service in "${services[@]}"; do
   DEPLOYMENT_FILE="deployments/deploy/${service}-deployment.yml"
-  VERSION_FILE=".version.${service}"
+  VERSION_FILE="deployments/version/.version.${service}"
   if [ -f "$VERSION_FILE" ]; then
     SERVICE_VERSION=$(cat $VERSION_FILE)
     IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${SERVICE_VERSION}"

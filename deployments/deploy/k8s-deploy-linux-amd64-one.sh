@@ -15,8 +15,11 @@ fi
 ROOT_DIR=$(pwd)
 echo $ROOT_DIR
 
+# Create version directory if it doesn't exist
+mkdir -p deployments/version
+
 # Source the deployment config
-source deploy.confg
+source deployments/deploy.confg
 
 NAMESPACE=$NAMESPACE
 VERSION=v$(date +%y%m%d%H%M%S)
@@ -87,7 +90,7 @@ if [[ "$run_docker_build" =~ ^[Yy]$ ]]; then
     docker push $IMAGE_TAG
     echo "Pushed $IMAGE_TAG"
     # Write version to individual service file
-    VERSION_FILE=".version.${service}"
+    VERSION_FILE="deployments/version/.version.${service}"
     echo $VERSION > $VERSION_FILE
     echo "Version saved to $VERSION_FILE"
   done
@@ -95,7 +98,7 @@ if [[ "$run_docker_build" =~ ^[Yy]$ ]]; then
 else
   echo "Skipping docker build..."
   # Read version from service-specific version file for deployment YAML update
-  VERSION_FILE=".version.${selected_service}"
+  VERSION_FILE="deployments/version/.version.${selected_service}"
   if [ ! -f "$VERSION_FILE" ]; then
     echo "Error: $VERSION_FILE not found. Cannot skip build without a prior version for $selected_service."
     exit 1
