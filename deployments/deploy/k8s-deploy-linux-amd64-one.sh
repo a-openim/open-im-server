@@ -86,14 +86,21 @@ if [[ "$run_docker_build" =~ ^[Yy]$ ]]; then
     docker inspect $IMAGE_TAG | grep -A 5 '"Architecture"'
     docker push $IMAGE_TAG
     echo "Pushed $IMAGE_TAG"
+    # Write version to individual service file
+    VERSION_FILE=".version.${service}"
+    echo $VERSION > $VERSION_FILE
+    echo "Version saved to $VERSION_FILE"
   done
-
-  echo $VERSION > .version
 
 else
   echo "Skipping docker build..."
-  # Read version from .version file for deployment YAML update
-  EXISTING_VERSION=$(cat .version)
+  # Read version from service-specific version file for deployment YAML update
+  VERSION_FILE=".version.${selected_service}"
+  if [ ! -f "$VERSION_FILE" ]; then
+    echo "Error: $VERSION_FILE not found. Cannot skip build without a prior version for $selected_service."
+    exit 1
+  fi
+  EXISTING_VERSION=$(cat $VERSION_FILE)
   IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${selected_service}:${EXISTING_VERSION}"
   echo "Using existing version: $EXISTING_VERSION"
 fi

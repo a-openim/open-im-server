@@ -40,13 +40,7 @@ fi
 
 # Login to private Harbor
 echo "Logging in to Harbor..."
-export DOCKER_CONFIG=$(mktemp -d)
-export DOCKER_CREDS_STORE=""
-echo '{"auths":{},"credsStore":""}' > $DOCKER_CONFIG/config.json
 echo "$HARBOR_PASS" | docker login $HARBOR_URL -u $HARBOR_USER --password-stdin
-
-unset DOCKER_CONFIG
-unset DOCKER_CREDS_STORE
 
 # Check if buildx builder exists
 if ! docker buildx ls | grep -q openim-builder; then
@@ -78,6 +72,10 @@ if [[ "$run_docker_build" =~ ^[Yy]$ ]]; then
       docker push $IMAGE_TAG
       if [ $? -eq 0 ]; then
          echo -e "\033[32mSUCCESS: $service pushed.\033[0m"
+         # Write version to individual service file
+         VERSION_FILE=".version.${service}"
+         echo $VERSION > $VERSION_FILE
+         echo "Version saved to $VERSION_FILE"
       else
          echo -e "\033[31mERROR: Push failed for $service\033[0m"
          FAILED_SERVICES+=("$service (Push Failed)")
@@ -106,31 +104,46 @@ if [[ "$run_docker_build" =~ ^[Yy]$ ]]; then
     echo "=========================================================="
   fi
 
-  # Update .version file
-  echo $VERSION > .version
-
 else
   echo "Skipping docker build..."
-  if [ -f ".version" ]; then
-    EXISTING_VERSION=$(cat .version)
-    echo "Using existing version: $EXISTING_VERSION"
-    VERSION=$EXISTING_VERSION
-  else
-    echo "Error: .version file not found. Cannot skip build without a prior version."
+  # Check if all service version files exist
+  ALL_VERSIONS_EXIST=true
+  for service in "${services[@]}"; do
+    VERSION_FILE=".version.${service}"
+    if [ ! -f "$VERSION_FILE" ]; then
+      echo "Error: $VERSION_FILE not found. Cannot skip build without a prior version for $service."
+      ALL_VERSIONS_EXIST=false
+    fi
+  done
+
+  if [ "$ALL_VERSIONS_EXIST" = false ]; then
     exit 1
   fi
+
+  echo "Using existing versions from individual service version files:"
+  for service in "${services[@]}"; do
+    VERSION_FILE=".version.${service}"
+    EXISTING_VERSION=$(cat $VERSION_FILE)
+    echo "  $service: $EXISTING_VERSION"
+  done
 fi
 
 # Update deployment YAMLs
 echo "Updating deployment YAMLs to use Harbor images..."
 for service in "${services[@]}"; do
   DEPLOYMENT_FILE="deployments/deploy/${service}-deployment.yml"
-  IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${VERSION}"
-  if [ -f "$DEPLOYMENT_FILE" ]; then
-    sed -i.bak "s|image:.*${service}:.*|image: ${IMAGE_TAG}|g" $DEPLOYMENT_FILE
-    echo "Updated $DEPLOYMENT_FILE"
+  VERSION_FILE=".version.${service}"
+  if [ -f "$VERSION_FILE" ]; then
+    SERVICE_VERSION=$(cat $VERSION_FILE)
+    IMAGE_TAG="${HARBOR_URL}/${HARBOR_PROJECT}/${service}:${SERVICE_VERSION}"
+    if [ -f "$DEPLOYMENT_FILE" ]; then
+      sed -i.bak "s|image:.*${service}:.*|image: ${IMAGE_TAG}|g" $DEPLOYMENT_FILE
+      echo "Updated $DEPLOYMENT_FILE with version: $SERVICE_VERSION"
+    else
+      echo "Warning: $DEPLOYMENT_FILE not found, skipping..."
+    fi
   else
-    echo "Warning: $DEPLOYMENT_FILE not found, skipping..."
+    echo "Warning: $VERSION_FILE not found, skipping $service..."
   fi
 done
 
