@@ -14,16 +14,20 @@ spec:
     spec:
       containers:
         - name: conversation-rpc-server-container
-          image: 10.88.88.13:81/app/openim-rpc-conversation:v260201212125
+          image: 10.88.88.13:81/app/openim-rpc-conversation:v260202002538
           env:
             - name: CONFIG_PATH
               value: "/config"
+            - name: DEPLOYMENT_TYPE
+              value: "kubernetes"
             - name: IMENV_REDIS_PASSWORD
               value: "root123456"
-            - name: IMENV_MONGODB_USERNAME
-              value: "root"
-            - name: IMENV_MONGODB_PASSWORD
-              value: "root123456"
+            - name: IMENV_MONGODB_URI
+              value: "mongodb://root:root123456@10.88.88.13:27017/openim_v3?authSource=admin"
+            - name: MONGO_URI
+              value: "mongodb://root:root123456@10.88.88.13:27017/openim_v3?authSource=admin"
+            - name: MONGODB_URI
+              value: "mongodb://root:root123456@10.88.88.13:27017/openim_v3?authSource=admin"
           volumeMounts:
             - name: openim-config
               mountPath: "/config"

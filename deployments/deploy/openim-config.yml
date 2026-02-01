@@ -43,7 +43,7 @@ data:
 
   mongodb.yml: |
     # URI for database connection, leave empty if using address and credential settings directly
-    uri: ''
+    uri: ""
     # List of MongoDB server addresses
     address: [ 10.88.88.13:27017 ]
     # Name of the database
@@ -58,6 +58,7 @@ data:
     maxPoolSize: 100
     # Maximum number of retry attempts for a failed database connection
     maxRetry: 10
+    mongoMode: standalone
 
   local-cache.yml: |
     user:
@@ -400,6 +401,8 @@ data:
     username: ''
     # Password for authentication
     password: ''
+    # SASL mechanism (empty to disable SASL authentication)
+    saslMechanism: ''
     # Producer acknowledgment settings
     producerAck:
     # Compression type to use (e.g., none, gzip, snappy)

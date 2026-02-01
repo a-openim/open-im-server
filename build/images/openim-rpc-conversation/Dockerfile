@@ -11,7 +11,6 @@ WORKDIR $SERVER_DIR
 
 # Copy the compiled binaries and mage from the builder image to the final image
 COPY ./_output/bin/platforms/linux/amd64/openim-rpc-conversation $SERVER_DIR/_output/
-COPY ./config $SERVER_DIR/config
 
 # Set the command to run when the container starts
 ENTRYPOINT ["sh", "-c", "_output/openim-rpc-conversation"]

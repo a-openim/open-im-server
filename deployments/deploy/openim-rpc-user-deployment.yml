@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: user-rpc-server
+  namespace: openim
 spec:
   replicas: 1
   selector:
@@ -24,10 +25,8 @@ spec:
               value: "root"
             - name: IMENV_MONGODB_PASSWORD
               value: "root123456"
-            - name: IMENV_KAFKA_USERNAME
-              value: "root"
-            - name: IMENV_KAFKA_PASSWORD
-              value: "root123456"
+            - name: IMENV_MONGODB_ADDRESS
+              value: "10.88.88.13:27017"
           volumeMounts:
             - name: openim-config
               mountPath: "/config"

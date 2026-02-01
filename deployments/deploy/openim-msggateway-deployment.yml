@@ -20,6 +20,12 @@ spec:
               value: "/config"
             - name: IMENV_REDIS_PASSWORD
               value: "root123456"
+            - name: IMENV_MONGODB_USERNAME
+              value: "root"
+            - name: IMENV_MONGODB_PASSWORD
+              value: "root123456"
+            - name: IMENV_MONGODB_ADDRESS
+              value: "10.88.88.13:27017"
           volumeMounts:
             - name: openim-config
               mountPath: "/config"
