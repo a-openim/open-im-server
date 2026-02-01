@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: openim-config
+  namespace: openim
 data:
   discovery.yml: |
     enable: "kubernetes" # "kubernetes" or "etcd"
@@ -375,12 +376,24 @@ data:
   share.yml: |
     secret: openIM123
 
-    imAdminUserID: ["imAdmin"]
+    # imAdminUser: Configuration for instant messaging system administrators
+    imAdminUser:
+      # userIDs: List of administrator user IDs.
+      # Each entry here corresponds by index to the matching entry in the nicknames list below.
+      userIDs: [imAdmin]
+      # nicknames: List of administrator display names.
+      # Each entry here corresponds by index to the matching entry in the userIDs list above.
+      nicknames: [superAdmin]
 
     # 1: For Android, iOS, Windows, Mac, and web platforms, only one instance can be online at a time
     multiLogin:
       policy: 1
+      # max num of tokens in one end
       maxNumOneEnd: 30
+
+    rpcMaxBodySize:
+      requestMaxBodySize:  8388608
+      responseMaxBodySize: 8388608
 
   kafka.yml: |
     # Username for authentication
