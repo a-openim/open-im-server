@@ -10,14 +10,14 @@ spec:
     - host: backend-openim.36x9.com
       http:
         paths:
-          - path: /openim-api
+          - path: /api
             pathType: Prefix
             backend:
               service:
                 name: openim-api-service
                 port:
                   number: 10002
-          - path: /openim-msggateway
+          - path: /msggateway
             pathType: Prefix
             backend:
               service:
