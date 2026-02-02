@@ -12,6 +12,8 @@ spec:
       labels:
         app: auth-rpc-server
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: node1
       containers:
         - name: auth-rpc-server-container
           image: 10.88.88.13:81/app/openim-rpc-auth:v260202125441

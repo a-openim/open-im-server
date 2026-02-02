@@ -13,6 +13,8 @@ spec:
       labels:
         app: push-rpc-server
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: node1
       containers:
         - name: push-rpc-server-container
           image: 10.88.88.13:81/app/openim-push:v260202125441

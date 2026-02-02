@@ -12,6 +12,8 @@ spec:
       labels:
         app: openim-msgtransfer-server
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: node1
       containers:
         - name: openim-msgtransfer-container
           image: 10.88.88.13:81/app/openim-msgtransfer:v260202125441

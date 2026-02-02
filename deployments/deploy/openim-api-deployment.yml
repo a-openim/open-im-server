@@ -12,6 +12,8 @@ spec:
       labels:
         app: openim-api
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: node1
       containers:
         - name: openim-api-container
           image: 10.88.88.13:81/app/openim-api:v260202125441

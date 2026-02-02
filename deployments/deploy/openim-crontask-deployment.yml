@@ -12,6 +12,8 @@ spec:
       labels:
         app: crontask
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: node1
       containers:
         - name: crontask-container
           image: 10.88.88.13:81/app/openim-crontask:v260202125441
