@@ -45,11 +45,10 @@ metadata:
     nginx.ingress.kubernetes.io/cors-max-age: "1728000"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-    nginx.ingress.kubernetes.io/websocket-services: "openim-msggateway-service"
+    nginx.ingress.kubernetes.io/websocket-services: "messagegateway-rpc-service"
     # --- WebSocket 支持配置 ---
     nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
     nginx.ingress.kubernetes.io/proxy-set-header: "Upgrade $http_upgrade"
-    nginx.ingress.kubernetes.io/proxy-set-header-1: "Connection $connection_upgrade"
 spec:
   ingressClassName: nginx
   rules:
@@ -60,6 +59,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: openim-msggateway-service
+                name: messagegateway-rpc-service
                 port:
                   number: 10001
