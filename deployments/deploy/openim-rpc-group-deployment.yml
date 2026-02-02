@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: group-rpc-server-container
-          image: 10.88.88.13:81/app/openim-rpc-group:v260202111235
+          image: 10.88.88.13:81/app/openim-rpc-group:v260202112947
           env:
             - name: CONFIG_PATH
               value: "/config"

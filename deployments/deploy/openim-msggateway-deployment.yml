@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: openim-msggateway-container
-          image: 10.88.88.13:81/app/openim-msggateway:v260202111235
+          image: 10.88.88.13:81/app/openim-msggateway:v260202112947
           env:
             - name: CONFIG_PATH
               value: "/config"
