@@ -10,6 +10,16 @@ spec:
       protocol: TCP
       port: 10260
       targetPort: 10260
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: group-rpc-prometheus
+spec:
+  selector:
+    app: group-rpc-server
+  ports:
     - name: prometheus-12260
       protocol: TCP
       port: 12260

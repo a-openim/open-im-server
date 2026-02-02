@@ -10,6 +10,16 @@ spec:
       protocol: TCP
       port: 10220
       targetPort: 10220
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: conversation-rpc-prometheus
+spec:
+  selector:
+    app: conversation-rpc-server
+  ports:
     - name: prometheus-12220
       protocol: TCP
       port: 12220

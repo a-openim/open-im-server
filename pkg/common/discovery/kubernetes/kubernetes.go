@@ -225,15 +225,17 @@ func (k *KubernetesConnManager) getServicePort(serviceName string) (int32, error
 		return 0, fmt.Errorf("service %s has no ports defined", serviceName)
 	}
 
+	// Use the first port that is not 10001 (msggateway WebSocket port)
+	// This ensures we select the gRPC port, not the prometheus port
 	for _, port := range svc.Spec.Ports {
 		// fmt.Println(serviceName, " Now Get Port:", port.Port)
 		if port.Port != 10001 {
 			svcPort = port.Port
-			break
+			return svcPort, nil
 		}
 	}
 
-	return svcPort, nil
+	return 0, fmt.Errorf("service %s has no valid gRPC port (all ports are 10001)", serviceName)
 }
 
 // watchEndpoints listens for changes in Pod resources.

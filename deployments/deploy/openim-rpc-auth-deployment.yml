@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: auth-rpc-server-container
-          image: 10.88.88.13:81/app/openim-rpc-auth:v260202024307
+          image: 10.88.88.13:81/app/openim-rpc-auth:v260202103707
           imagePullPolicy: IfNotPresent
           env:
             - name: CONFIG_PATH

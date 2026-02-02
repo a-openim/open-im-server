@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: conversation-rpc-server-container
-          image: 10.88.88.13:81/app/openim-rpc-conversation:v260202024307
+          image: 10.88.88.13:81/app/openim-rpc-conversation:v260202103707
           env:
             - name: CONFIG_PATH
               value: "/config"

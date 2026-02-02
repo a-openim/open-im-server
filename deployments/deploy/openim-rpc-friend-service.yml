@@ -10,6 +10,16 @@ spec:
       protocol: TCP
       port: 10240
       targetPort: 10240
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: friend-rpc-prometheus
+spec:
+  selector:
+    app: friend-rpc-server
+  ports:
     - name: prometheus-12240
       protocol: TCP
       port: 12240
