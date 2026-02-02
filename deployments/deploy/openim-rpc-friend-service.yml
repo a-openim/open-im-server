@@ -6,7 +6,7 @@ spec:
   selector:
     app: friend-rpc-server
   ports:
-    - name: http-10240
+    - name: grpc
       protocol: TCP
       port: 10240
       targetPort: 10240

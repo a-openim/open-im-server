@@ -6,11 +6,11 @@ spec:
   selector:
     app: third-rpc-server
   ports:
-    - name: http-10300
+    - name: grpc
       protocol: TCP
       port: 10300
       targetPort: 10300
-    - name: prometheus-12300
+    - name: prometheus
       protocol: TCP
       port: 12300
       targetPort: 12300

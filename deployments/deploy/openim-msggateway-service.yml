@@ -10,11 +10,11 @@ spec:
       protocol: TCP
       port: 10001
       targetPort: 10001
-    - name: grpc-10140
+    - name: grpc
       protocol: TCP
       port: 10140
       targetPort: 10140
-    - name: prometheus-12001
+    - name: prometheus
       protocol: TCP
       port: 12001
       targetPort: 12001

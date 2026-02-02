@@ -6,11 +6,11 @@ spec:
   selector:
     app: user-rpc-server
   ports:
-    - name: http-10320
+    - name: grpc
       protocol: TCP
       port: 10320
       targetPort: 10320
-    - name: prometheus-12320
+    - name: prometheus
       protocol: TCP
       port: 12320
       targetPort: 12320

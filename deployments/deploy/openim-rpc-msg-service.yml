@@ -6,11 +6,11 @@ spec:
   selector:
     app: msg-rpc-server
   ports:
-    - name: http-10280
+    - name: grpc
       protocol: TCP
       port: 10280
       targetPort: 10280
-    - name: prometheus-12280
+    - name: prometheus
       protocol: TCP
       port: 12280
       targetPort: 12280

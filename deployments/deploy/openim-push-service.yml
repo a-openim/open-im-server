@@ -6,11 +6,11 @@ spec:
   selector:
     app: push-rpc-server
   ports:
-    - name: http-10170
+    - name: grpc
       protocol: TCP
       port: 10170
       targetPort: 10170
-    - name: prometheus-12170
+    - name: prometheus
       protocol: TCP
       port: 12170
       targetPort: 12170

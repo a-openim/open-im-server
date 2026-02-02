@@ -6,11 +6,11 @@ spec:
   selector:
     app: auth-rpc-server
   ports:
-    - name: http-10200
+    - name: grpc
       protocol: TCP
       port: 10200
       targetPort: 10200
-    - name: prometheus-12200
+    - name: prometheus
       protocol: TCP
       port: 12200
       targetPort: 12200

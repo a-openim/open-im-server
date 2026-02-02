@@ -6,7 +6,7 @@ spec:
   selector:
     app: group-rpc-server
   ports:
-    - name: http-10260
+    - name: grpc
       protocol: TCP
       port: 10260
       targetPort: 10260
