@@ -63,34 +63,6 @@ spec:
                 port:
                   number: 10001
 ---
-# Endpoints for MinIO (running on 10.88.88.13:9000)
-apiVersion: v1
-kind: Endpoints
-metadata:
-  name: minio-external
-  namespace: openim
-subsets:
-  - addresses:
-      - ip: 10.88.88.13
-    ports:
-      - port: 9000
-        protocol: TCP
----
-# Service for MinIO using the endpoints
-apiVersion: v1
-kind: Service
-metadata:
-  name: minio-external-service
-  namespace: openim
-spec:
-  type: ClusterIP
-  ports:
-    - port: 9000
-      targetPort: 9000
-      protocol: TCP
-  sessionAffinity: None
----
-# Ingress for MinIO
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -98,28 +70,20 @@ metadata:
   namespace: openim
   annotations:
     kubernetes.io/ingress.class: "nginx"
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # 开启跨域并允许所有来源
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    # 允许 S3/MinIO 常用请求头
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization,Content-Type,X-Amz-Content-Sha256,X-Amz-Date,X-Amz-Algorithm,X-Amz-Credential,X-Amz-SignedHeaders,x-amz-meta-*"
+    # 解除上传文件大小限制
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      proxy_set_header Host $host;
-      proxy_set_header X-Real-IP $remote_addr;
-      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-      proxy_set_header X-Forwarded-Proto $scheme;
-      proxy_set_header X-NginX-Proxy true;
-      proxy_set_header Upgrade $http_upgrade;
-      proxy_set_header Connection "upgrade";
-      proxy_http_version 1.1;
-      chunked_transfer_encoding off;
-      proxy_cache off;
-      proxy_cache_use_stale error timeout updating;
-      proxy_buffering off;
-      proxy_request_buffering off;
 spec:
   ingressClassName: nginx
   rules:
-  - http:
+  - host: minio-openim.36x9.com
+    http:
       paths:
-      - path: /minio
+      - path: /
         pathType: Prefix
         backend:
           service:
