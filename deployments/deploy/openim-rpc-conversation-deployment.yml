@@ -16,7 +16,7 @@ spec:
         kubernetes.io/hostname: node1
       containers:
         - name: conversation-rpc-server-container
-          image: 10.88.88.13:81/app/openim-rpc-conversation:v260202112947
+          image: 10.88.88.13:81/app/openim-rpc-conversation:v260202133850
           env:
             - name: CONFIG_PATH
               value: "/config"

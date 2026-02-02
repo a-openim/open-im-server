@@ -93,6 +93,17 @@ if kubectl get svc -n "$NAMESPACE" "$SERVICE_NAME" &> /dev/null; then
     echo ""
     echo "Service details:"
     kubectl get svc -n "$NAMESPACE" "$SERVICE_NAME" -o yaml | grep -A 10 "ports:"
+    echo ""
+    echo "Checking port names..."
+    PORT_NAMES=$(kubectl get svc -n "$NAMESPACE" "$SERVICE_NAME" -o jsonpath='{.spec.ports[*].name}')
+    if echo "$PORT_NAMES" | grep -q "grpc"; then
+        print_success "Service has 'grpc' port name (required for kuberesolver)"
+    else
+        print_error "Service does NOT have 'grpc' port name!"
+        echo "   Current port names: $PORT_NAMES"
+        echo "   The kuberesolver library requires the gRPC port to be named 'grpc'"
+        echo "   This will cause: 'index out of range [0] with length 0' panic"
+    fi
 else
     print_error "Service '$SERVICE_NAME' does not exist"
     echo ""
@@ -207,8 +218,60 @@ else
     print_success "No ingress resources found (correct for RPC services)"
 fi
 
-# Step 10: Summary and Recommendations
-print_header "Step 10: Summary and Recommendations"
+# Step 10: Check all RPC services for correct port names
+print_header "Step 10: Checking All RPC Services Port Names"
+echo "Checking all RPC services for correct 'grpc' port name..."
+echo ""
+
+RPC_SERVICES=(
+    "msg-rpc-service"
+    "user-rpc-service"
+    "friend-rpc-service"
+    "group-rpc-service"
+    "auth-rpc-service"
+    "conversation-rpc-service"
+    "push-rpc-service"
+    "third-rpc-service"
+    "messagegateway-rpc-service"
+)
+
+ALL_CORRECT=true
+for svc in "${RPC_SERVICES[@]}"; do
+    if kubectl get svc -n "$NAMESPACE" "$svc" &> /dev/null; then
+        PORT_NAMES=$(kubectl get svc -n "$NAMESPACE" "$svc" -o jsonpath='{.spec.ports[*].name}')
+        if echo "$PORT_NAMES" | grep -q "grpc"; then
+            print_success "$svc: has 'grpc' port name"
+        else
+            print_error "$svc: missing 'grpc' port name (found: $PORT_NAMES)"
+            ALL_CORRECT=false
+        fi
+    else
+        print_warning "$svc: service not found"
+    fi
+done
+
+echo ""
+if [ "$ALL_CORRECT" = true ]; then
+    print_success "All RPC services have correct port names"
+else
+    print_error "Some RPC services have incorrect port names - this will cause kuberesolver panic"
+    echo ""
+    echo "To fix port names, update service YAML files:"
+    echo "  - Change gRPC port name from 'http-XXXX' to 'grpc'"
+    echo "  - Change prometheus port name from 'prometheus-XXXX' to 'prometheus'"
+    echo ""
+    echo "Example:"
+    echo "  ports:"
+    echo "    - name: grpc              # Changed from 'http-10280'"
+    echo "      port: 10280"
+    echo "      targetPort: 10280"
+    echo "    - name: prometheus        # Changed from 'prometheus-12280'"
+    echo "      port: 12280"
+    echo "      targetPort: 12280"
+fi
+
+# Step 11: Summary and Recommendations
+print_header "Step 11: Summary and Recommendations"
 
 echo ""
 echo "Common Issues and Solutions:"
@@ -228,12 +291,18 @@ echo "   - Check network policies: kubectl get networkpolicies -n $NAMESPACE"
 echo "   - Verify pod is in the same namespace"
 echo "   - Check firewall rules"
 echo ""
-echo "4. If logs show gRPC errors:"
+echo "4. If logs show kuberesolver panic 'index out of range [0] with length 0':"
+echo "   - This is caused by incorrect port names in service configuration"
+echo "   - The kuberesolver library requires gRPC port to be named 'grpc'"
+echo "   - Check Step 10 above for detailed port name verification"
+echo "   - Fix: Update service YAML to use 'name: grpc' for gRPC port"
+echo ""
+echo "5. If logs show gRPC errors:"
 echo "   - Verify service discovery is using 'kubernetes' mode"
 echo "   - Check ConfigMap discovery.yml configuration"
 echo "   - Ensure all RPC services are running"
 echo ""
-echo "5. HTTP/2 vs HTTP/1.1 error:"
+echo "6. HTTP/2 vs HTTP/1.1 error:"
 echo "   - This error typically means the client is connecting through an HTTP/1.1 endpoint"
 echo "   - Ensure RPC services use internal service discovery (not ingress)"
 echo "   - Verify client is using correct service name: $SERVICE_NAME:$EXPECTED_PORT"

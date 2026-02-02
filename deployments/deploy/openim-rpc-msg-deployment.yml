@@ -17,7 +17,7 @@ spec:
         kubernetes.io/hostname: node1
       containers:
         - name: msg-rpc-server-container
-          image: 10.88.88.13:81/app/openim-rpc-msg:v260202125441
+          image: 10.88.88.13:81/app/openim-rpc-msg:v260202133850
           env:
             - name: CONFIG_PATH
               value: "/config"
