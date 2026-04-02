@@ -1,4 +1,4 @@
-enable: etcd
+enable: kubernetes
 etcd:
   rootDirectory: openim
   address: [10.88.88.13:12379]
